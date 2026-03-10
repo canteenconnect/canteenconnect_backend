@@ -14,7 +14,7 @@ class Transaction(db.Model):
     payment_gateway = db.Column(db.String(32), nullable=False)
     gateway_transaction_id = db.Column(db.String(120), nullable=True, unique=True, index=True)
     status = db.Column(db.String(24), nullable=False, index=True)
-    metadata = db.Column(db.JSON)
+    details = db.Column(db.JSON)
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, server_default=func.now())
 
     order = db.relationship("Order", back_populates="transactions")
@@ -33,5 +33,6 @@ class Transaction(db.Model):
             "payment_gateway": self.payment_gateway,
             "gateway_transaction_id": self.gateway_transaction_id,
             "status": self.status,
+            "details": self.details,
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }

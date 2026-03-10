@@ -11,7 +11,7 @@ def log_audit(
     action: str,
     entity_type: str,
     entity_id: int | None = None,
-    metadata: dict[str, Any] | None = None,
+    details: dict[str, Any] | None = None,
 ):
     ip_address = request.headers.get("X-Forwarded-For", request.remote_addr)
     audit = AuditLog(
@@ -20,7 +20,7 @@ def log_audit(
         entity_type=entity_type,
         entity_id=entity_id,
         ip_address=ip_address,
-        metadata=metadata,
+        details=details,
     )
     db.session.add(audit)
     db.session.commit()
