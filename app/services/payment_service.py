@@ -3,7 +3,6 @@ from __future__ import annotations
 from decimal import Decimal
 
 from flask import current_app
-import razorpay
 
 from app import db
 from app.models import (
@@ -20,6 +19,8 @@ from app.utils.api_error import APIError
 
 class RazorpayService:
     def __init__(self):
+        import razorpay
+
         key_id = current_app.config.get("RAZORPAY_KEY_ID")
         key_secret = current_app.config.get("RAZORPAY_KEY_SECRET")
         if not key_id or not key_secret:
@@ -40,6 +41,8 @@ class RazorpayService:
             raise APIError("Failed to create Razorpay order.", 502, "gateway_error") from exc
 
     def verify_payment_signature(self, payload: dict):
+        import razorpay
+
         utility = razorpay.Utility()
         try:
             utility.verify_payment_signature(payload)
@@ -48,6 +51,8 @@ class RazorpayService:
             return False
 
     def verify_webhook_signature(self, body: bytes, signature: str, secret: str):
+        import razorpay
+
         utility = razorpay.Utility()
         try:
             utility.verify_webhook_signature(body, signature, secret)
