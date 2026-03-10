@@ -151,9 +151,10 @@ def create_app(config_name: str | None = None):
     _register_jwt_callbacks(app)
     _register_blueprints(app)
 
-    from app.cli import seed_roles
+    from app.cli import create_superadmin, seed_roles
 
     app.cli.add_command(seed_roles)
+    app.cli.add_command(create_superadmin)
 
     @app.get("/health")
     def health_check():
