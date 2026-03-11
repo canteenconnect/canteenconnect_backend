@@ -70,9 +70,7 @@ def create_superadmin(email: str, password: str):
     click.echo("Super admin created.")
 
 
-@click.command("seed-demo")
-@with_appcontext
-def seed_demo():
+def seed_demo_data() -> int:
     campus = Campus.query.filter_by(code="CANTEENCONNECT").first()
     if not campus:
         campus = Campus(name="CanteenConnect Campus", code="CANTEENCONNECT", location="Main Campus")
@@ -122,4 +120,11 @@ def seed_demo():
 
     if created:
         db.session.commit()
+    return created
+
+
+@click.command("seed-demo")
+@with_appcontext
+def seed_demo():
+    created = seed_demo_data()
     click.echo(f"Demo menu items created: {created}")

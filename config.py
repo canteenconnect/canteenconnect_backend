@@ -60,6 +60,7 @@ class Config:
     HOST = os.getenv("HOST", "0.0.0.0")
     PORT = int(os.getenv("PORT", "5000"))
     DEBUG = _as_bool(os.getenv("FLASK_DEBUG"), default=False)
+    AUTO_SEED_DEMO = _as_bool(os.getenv("AUTO_SEED_DEMO"), default=False)
 
 
 class DevelopmentConfig(Config):

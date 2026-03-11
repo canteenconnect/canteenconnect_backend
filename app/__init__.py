@@ -1,4 +1,5 @@
 from flask import Flask, jsonify
+from sqlalchemy.exc import SQLAlchemyError
 from flask_bcrypt import Bcrypt
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
@@ -153,11 +154,20 @@ def create_app(config_name: str | None = None):
     _register_jwt_callbacks(app)
     _register_blueprints(app)
 
-    from app.cli import create_superadmin, seed_roles, seed_demo
+    from app.cli import create_superadmin, seed_roles, seed_demo, seed_demo_data
 
     app.cli.add_command(seed_roles)
     app.cli.add_command(create_superadmin)
     app.cli.add_command(seed_demo)
+
+    if app.config.get("AUTO_SEED_DEMO"):
+        with app.app_context():
+            try:
+                created = seed_demo_data()
+                if created:
+                    app.logger.info("Seeded demo menu items: %s", created)
+            except SQLAlchemyError as exc:
+                app.logger.warning("Skipping demo seed due to DB error: %s", exc)
 
     @app.get("/")
     def index():
