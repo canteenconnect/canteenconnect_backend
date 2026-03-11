@@ -1,8 +1,20 @@
+from decimal import Decimal
+
 import click
 from flask.cli import with_appcontext
 
 from app import db
-from app.models import ROLE_ADMIN, ROLE_STUDENT, ROLE_SUPER_ADMIN, ROLE_VENDOR, Role, User
+from app.models import (
+    ROLE_ADMIN,
+    ROLE_STUDENT,
+    ROLE_SUPER_ADMIN,
+    ROLE_VENDOR,
+    Campus,
+    MenuItem,
+    Outlet,
+    Role,
+    User,
+)
 
 
 @click.command("seed-roles")
@@ -56,3 +68,58 @@ def create_superadmin(email: str, password: str):
     db.session.add(user)
     db.session.commit()
     click.echo("Super admin created.")
+
+
+@click.command("seed-demo")
+@with_appcontext
+def seed_demo():
+    campus = Campus.query.filter_by(code="CANTEENCONNECT").first()
+    if not campus:
+        campus = Campus(name="CanteenConnect Campus", code="CANTEENCONNECT", location="Main Campus")
+        db.session.add(campus)
+        db.session.commit()
+
+    outlet = Outlet.query.filter_by(campus_id=campus.id, name="Main Canteen").first()
+    if not outlet:
+        outlet = Outlet(name="Main Canteen", location="Campus Center", campus_id=campus.id)
+        db.session.add(outlet)
+        db.session.commit()
+
+    items = [
+        ("Veg Fried Rice", "Street-style vegetable fried rice with spring onions.", "110"),
+        ("Egg Fried Rice", "Classic egg fried rice with pepper and soy flavor.", "130"),
+        ("Chicken Fried Rice", "Wok-tossed fried rice with spicy chicken pieces.", "150"),
+        ("Gobi Fried Rice", "Crispy gobi fried rice with indo-chinese masala.", "125"),
+        ("Veg Noodles", "Hakka noodles loaded with fresh vegetables.", "105"),
+        ("Egg Noodles", "Spicy noodles tossed with scrambled egg.", "125"),
+        ("Chicken Noodles", "Chicken noodles with garlic-chilli wok flavor.", "145"),
+        ("Gobi Noodles", "Crunchy gobi noodles with spicy sauce.", "120"),
+        ("Veg Puff", "Flaky bakery puff filled with spicy veggies.", "35"),
+        ("Egg Puff", "Golden puff pastry with masala egg filling.", "45"),
+        ("Chicken Puff", "Bakery-style puff with spicy chicken mince.", "55"),
+        ("Cola (300ml)", "Chilled cola served ice cold.", "40"),
+        ("Lemon Soda", "Fresh lemon soda with a fizzy kick.", "35"),
+        ("Orange Fizz", "Refreshing orange flavored cool drink.", "40"),
+        ("Mango Drink", "Sweet chilled mango drink.", "45"),
+    ]
+
+    created = 0
+    for name, description, price in items:
+        existing = MenuItem.query.filter_by(outlet_id=outlet.id, name=name).first()
+        if existing:
+            continue
+        db.session.add(
+            MenuItem(
+                outlet_id=outlet.id,
+                name=name,
+                description=description,
+                price=Decimal(price),
+                available_quantity=50,
+                is_available=True,
+            )
+        )
+        created += 1
+
+    if created:
+        db.session.commit()
+    click.echo(f"Demo menu items created: {created}")

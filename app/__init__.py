@@ -153,10 +153,11 @@ def create_app(config_name: str | None = None):
     _register_jwt_callbacks(app)
     _register_blueprints(app)
 
-    from app.cli import create_superadmin, seed_roles
+    from app.cli import create_superadmin, seed_roles, seed_demo
 
     app.cli.add_command(seed_roles)
     app.cli.add_command(create_superadmin)
+    app.cli.add_command(seed_demo)
 
     @app.get("/")
     def index():
