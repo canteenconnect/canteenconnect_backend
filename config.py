@@ -12,11 +12,18 @@ def _as_bool(value: str | None, default: bool = False) -> bool:
     return str(value).strip().lower() in {"1", "true", "yes", "on"}
 
 
+DEFAULT_CORS_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "https://canteenconnect-frontend.vercel.app",
+]
+
+
 def _parse_origins(value: str | None):
     if not value:
-        return []
+        return DEFAULT_CORS_ORIGINS
     origins = [origin.strip() for origin in value.split(",") if origin.strip()]
-    return origins
+    return origins or DEFAULT_CORS_ORIGINS
 
 
 class Config:
