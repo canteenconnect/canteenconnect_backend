@@ -124,7 +124,7 @@ def _register_blueprints(app: Flask):
     # Backward-compatible /api prefix for existing clients.
     app.register_blueprint(auth_bp, url_prefix="/api", name_prefix="api")
     app.register_blueprint(profile_bp, url_prefix="/api", name_prefix="api")
-    app.register_blueprint(student_bp, url_prefix="/api", name_prefix="api")
+    app.register_blueprint(student_bp, url_prefix="/api/student", name_prefix="api")
     app.register_blueprint(vendor_bp, url_prefix="/api", name_prefix="api")
     app.register_blueprint(admin_bp, url_prefix="/api", name_prefix="api")
     app.register_blueprint(payment_bp, url_prefix="/api", name_prefix="api")
