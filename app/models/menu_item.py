@@ -24,6 +24,7 @@ class MenuItem(db.Model):
 
     outlet = db.relationship("Outlet", back_populates="menu_items")
     order_items = db.relationship("OrderItem", back_populates="menu_item")
+    favorites = db.relationship("Favorite", back_populates="menu_item", cascade="all, delete-orphan")
 
     __table_args__ = (
         Index("ix_menu_items_outlet_id_name", "outlet_id", "name"),

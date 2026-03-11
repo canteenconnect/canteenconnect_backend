@@ -1,5 +1,6 @@
 from app.models.audit_log import AuditLog
 from app.models.campus import Campus
+from app.models.favorite import Favorite
 from app.models.menu_item import MenuItem
 from app.models.order import (
     ORDER_STATUSES,
@@ -33,6 +34,7 @@ from app.models.user import (
 __all__ = [
     "AuditLog",
     "Campus",
+    "Favorite",
     "MenuItem",
     "ORDER_STATUSES",
     "ORDER_STATUS_CANCELLED",

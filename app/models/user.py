@@ -40,6 +40,7 @@ class User(db.Model):
     payments = db.relationship("Payment", back_populates="user")
     transactions = db.relationship("Transaction", back_populates="user")
     audit_logs = db.relationship("AuditLog", back_populates="user")
+    favorites = db.relationship("Favorite", back_populates="user", cascade="all, delete-orphan")
 
     __table_args__ = (
         Index("ix_users_role_id", "role_id"),

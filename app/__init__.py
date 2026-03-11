@@ -107,6 +107,7 @@ def _register_security_headers(app: Flask):
 def _register_blueprints(app: Flask):
     from app.routes.admin_routes import admin_bp
     from app.routes.auth_routes import auth_bp
+    from app.routes.compat_routes import compat_bp
     from app.routes.payment_routes import payment_bp
     from app.routes.profile_routes import profile_bp
     from app.routes.student_routes import student_bp
@@ -118,6 +119,7 @@ def _register_blueprints(app: Flask):
     app.register_blueprint(vendor_bp)
     app.register_blueprint(admin_bp)
     app.register_blueprint(payment_bp)
+    app.register_blueprint(compat_bp)
 
     # Backward-compatible /api prefix for existing clients.
     app.register_blueprint(auth_bp, url_prefix="/api", name_prefix="api")
