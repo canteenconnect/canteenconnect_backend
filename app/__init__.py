@@ -156,6 +156,20 @@ def create_app(config_name: str | None = None):
     app.cli.add_command(seed_roles)
     app.cli.add_command(create_superadmin)
 
+    @app.get("/")
+    def index():
+        return (
+            jsonify(
+                {
+                    "status": "ok",
+                    "message": "CanteenConnect API is running.",
+                    "health": "/health",
+                    "docs": "Not available",
+                }
+            ),
+            200,
+        )
+
     @app.get("/health")
     def health_check():
         return jsonify({"status": "ok"}), 200
