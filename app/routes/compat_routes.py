@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from decimal import Decimal
 
 from flask import Blueprint, jsonify, request
@@ -42,6 +43,7 @@ def _legacy_role(user: User | None) -> str:
 
 def _legacy_user(user: User) -> dict:
     username = user.email.split("@")[0] if user.email else user.name.split(" ")[0].lower()
+    now_iso = datetime.now(timezone.utc).isoformat()
     return {
         "id": user.id,
         "username": username,
@@ -54,8 +56,8 @@ def _legacy_user(user: User) -> dict:
         "department": user.department,
         "profileImage": None,
         "dietaryPreference": "both",
-        "createdAt": user.created_at.isoformat() if user.created_at else None,
-        "updatedAt": user.updated_at.isoformat() if user.updated_at else None,
+        "createdAt": user.created_at.isoformat() if user.created_at else now_iso,
+        "updatedAt": user.updated_at.isoformat() if user.updated_at else now_iso,
     }
 
 
