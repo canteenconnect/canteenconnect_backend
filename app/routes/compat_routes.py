@@ -54,7 +54,7 @@ def _legacy_user(user: User) -> dict:
         "phoneNumber": user.phone,
         "collegeId": user.roll_number,
         "department": user.department,
-        "profileImage": None,
+        "profileImage": user.avatar_url,
         "dietaryPreference": "both",
         "createdAt": user.created_at.isoformat() if user.created_at else now_iso,
         "updatedAt": user.updated_at.isoformat() if user.updated_at else now_iso,

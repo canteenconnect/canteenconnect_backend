@@ -5,6 +5,7 @@ __pycache__/
 *.pyc
 .env
 .env.*
+!.env.example
 *.log
 *.sqlite3
 *.db

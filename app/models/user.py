@@ -19,6 +19,9 @@ class User(db.Model):
     email = db.Column(db.String(255), nullable=False, unique=True, index=True)
     phone = db.Column(db.String(20))
     password_hash = db.Column(db.String(255), nullable=False)
+    auth_provider = db.Column(db.String(32), nullable=False, server_default="local")
+    google_sub = db.Column(db.String(255), unique=True, index=True)
+    avatar_url = db.Column(db.String(512))
     role_id = db.Column(
         db.Integer,
         db.ForeignKey("roles.id", ondelete="RESTRICT"),
@@ -60,6 +63,9 @@ class User(db.Model):
             "name": self.name,
             "email": self.email,
             "phone": self.phone,
+            "auth_provider": self.auth_provider,
+            "google_sub": self.google_sub,
+            "avatar_url": self.avatar_url,
             "role": self.role.name if self.role else None,
             "role_id": self.role_id,
             "campus_id": self.campus_id,

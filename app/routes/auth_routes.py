@@ -1,13 +1,15 @@
 from datetime import datetime, timezone
+from secrets import token_urlsafe
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, current_app, jsonify, request
 from flask_jwt_extended import current_user, get_jwt, jwt_required
 from marshmallow import ValidationError
 
 from app import db, limiter
 from app.models import ROLE_STUDENT, Role, User
-from app.schemas.auth import LoginSchema, RegisterSchema
+from app.schemas.auth import GoogleLoginSchema, LoginSchema, RegisterSchema
 from app.services.audit_service import log_audit
+from app.services.google_auth_service import verify_google_credential
 from app.utils.api_error import APIError
 from app.utils.jwt_helper import create_user_tokens, revoke_current_token, revoke_token
 
@@ -22,6 +24,11 @@ def _get_role_by_name(role_name: str):
     db.session.add(role)
     db.session.commit()
     return role
+
+
+def _auth_payload(user: User):
+    tokens = create_user_tokens(user)
+    return {"user": user.to_dict(), **tokens}
 
 
 @auth_bp.post("/register")
@@ -60,9 +67,8 @@ def register():
     db.session.add(user)
     db.session.commit()
 
-    tokens = create_user_tokens(user)
     log_audit(user.id, "user_register", "user", user.id)
-    return jsonify({"user": user.to_dict(), **tokens}), 201
+    return jsonify(_auth_payload(user)), 201
 
 
 @auth_bp.post("/login")
@@ -81,9 +87,80 @@ def login():
     if not user.is_active:
         raise APIError("Account is disabled.", 403, "forbidden")
 
-    tokens = create_user_tokens(user)
     log_audit(user.id, "user_login", "user", user.id)
-    return jsonify({"user": user.to_dict(), **tokens}), 200
+    return jsonify(_auth_payload(user)), 200
+
+
+@auth_bp.post("/google")
+@limiter.limit("20 per minute")
+def google_login():
+    payload = request.get_json(silent=True) or {}
+    schema = GoogleLoginSchema()
+    try:
+        data = schema.load(payload)
+    except ValidationError as err:
+        raise APIError("Invalid Google login payload.", 400, "validation_error", err.messages)
+
+    google_identity = verify_google_credential(
+        data["credential"],
+        current_app.config.get("GOOGLE_OAUTH_CLIENT_ID"),
+    )
+
+    user = User.query.filter_by(google_sub=google_identity["sub"]).first()
+    created = False
+    changed = False
+
+    if user is None:
+        user = User.query.filter_by(email=google_identity["email"]).first()
+        if user and user.google_sub and user.google_sub != google_identity["sub"]:
+            raise APIError(
+                "This email is already linked to a different Google account.",
+                409,
+                "conflict",
+            )
+
+        if user is None:
+            role = _get_role_by_name(ROLE_STUDENT)
+            if not role:
+                raise APIError("Role configuration missing.", 500, "configuration_error")
+
+            user = User(
+                name=google_identity["name"],
+                email=google_identity["email"],
+                role_id=role.id,
+                auth_provider="google",
+                google_sub=google_identity["sub"],
+                avatar_url=google_identity["picture"],
+            )
+            user.set_password(token_urlsafe(32))
+            db.session.add(user)
+            created = True
+            changed = True
+        else:
+            user.google_sub = google_identity["sub"]
+            changed = True
+
+    if not user.is_active:
+        raise APIError("Account is disabled.", 403, "forbidden")
+
+    if google_identity["picture"] and user.avatar_url != google_identity["picture"]:
+        user.avatar_url = google_identity["picture"]
+        changed = True
+
+    if google_identity["name"] and user.name != google_identity["name"] and user.auth_provider == "google":
+        user.name = google_identity["name"]
+        changed = True
+
+    if created:
+        log_action = "user_register_google"
+    else:
+        log_action = "user_login_google"
+
+    if changed:
+        db.session.commit()
+
+    log_audit(user.id, log_action, "user", user.id, {"provider": "google"})
+    return jsonify(_auth_payload(user)), 201 if created else 200
 
 
 @auth_bp.post("/refresh")
@@ -100,9 +177,8 @@ def refresh():
     expires_at = datetime.fromtimestamp(exp, tz=timezone.utc) if exp else None
     revoke_token(jti, "refresh", user.id, expires_at)
 
-    tokens = create_user_tokens(user)
     log_audit(user.id, "token_refresh", "user", user.id)
-    return jsonify(tokens), 200
+    return jsonify(create_user_tokens(user)), 200
 
 
 @auth_bp.post("/logout")
