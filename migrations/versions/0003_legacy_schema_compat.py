@@ -176,6 +176,8 @@ def _migrate_users_table() -> None:
             server_default=sa.text("'student'"),
         )
 
+    role_source = "users.role" if "role" in columns else "'student'"
+
     op.execute(
         sa.text(
             """
@@ -214,12 +216,12 @@ def _migrate_users_table() -> None:
     )
     op.execute(
         sa.text(
-            """
+            f"""
             UPDATE users
             SET role_id = roles.id
             FROM roles
             WHERE users.role_id IS NULL
-              AND roles.name = CASE lower(COALESCE(users.role, 'student'))
+              AND roles.name = CASE lower(COALESCE({role_source}, 'student'))
                 WHEN 'admin' THEN 'admin'
                 WHEN 'executive' THEN 'super_admin'
                 WHEN 'kitchen' THEN 'kitchen_staff'
