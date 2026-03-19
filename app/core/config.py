@@ -31,11 +31,14 @@ class Settings(BaseSettings):
     secret_key: str = Field(default="change-this-secret", alias="SECRET_KEY")
     algorithm: str = "HS256"
     access_token_expire_minutes: int = Field(default=60, alias="ACCESS_TOKEN_EXPIRE_MINUTES")
+    refresh_token_expire_days: int = Field(default=14, alias="REFRESH_TOKEN_EXPIRE_DAYS")
 
     auto_create_schema: bool = Field(default=False, alias="AUTO_CREATE_SCHEMA")
     initial_admin_username: str | None = Field(default=None, alias="INITIAL_ADMIN_USERNAME")
     initial_admin_email: str | None = Field(default=None, alias="INITIAL_ADMIN_EMAIL")
     initial_admin_password: str | None = Field(default=None, alias="INITIAL_ADMIN_PASSWORD")
+    initial_admin_role: str = Field(default="super_admin", alias="INITIAL_ADMIN_ROLE")
+    initial_admin_full_name: str = Field(default="Platform Administrator", alias="INITIAL_ADMIN_FULL_NAME")
 
     cors_origins: Annotated[list[str], NoDecode] = Field(
         default_factory=lambda: list(DEFAULT_CORS_ORIGINS),

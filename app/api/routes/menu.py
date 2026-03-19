@@ -13,6 +13,7 @@ from app.schemas.menu import MenuItemCreate, MenuItemRead, MenuItemUpdate
 from app.schemas.outlet import OutletRead
 
 router = APIRouter()
+MENU_MANAGEMENT_ROLES = ("admin", "super_admin", "campus_admin", "vendor_manager")
 
 
 @router.get("/outlets", response_model=list[OutletRead], summary="List active outlets")
@@ -63,7 +64,7 @@ def get_menu_item(db: DbSession, item_id: int) -> MenuItemRead:
 def create_menu_item(
     db: DbSession,
     payload: MenuItemCreate,
-    _: Annotated[User, Depends(require_roles("admin"))],
+    _: Annotated[User, Depends(require_roles(*MENU_MANAGEMENT_ROLES))],
 ) -> MenuItemRead:
     """Create a new menu item for an outlet."""
 
@@ -90,7 +91,7 @@ def update_menu_item(
     db: DbSession,
     item_id: int,
     payload: MenuItemUpdate,
-    _: Annotated[User, Depends(require_roles("admin"))],
+    _: Annotated[User, Depends(require_roles(*MENU_MANAGEMENT_ROLES))],
 ) -> MenuItemRead:
     """Update a menu item in place."""
 
@@ -120,7 +121,7 @@ def update_menu_item(
 def delete_menu_item(
     db: DbSession,
     item_id: int,
-    _: Annotated[User, Depends(require_roles("admin"))],
+    _: Annotated[User, Depends(require_roles(*MENU_MANAGEMENT_ROLES))],
 ) -> Response:
     """Delete a menu item."""
 

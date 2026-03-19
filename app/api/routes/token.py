@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordRequestForm
 
 from app.api.deps import DbSession
@@ -25,6 +25,7 @@ router = APIRouter()
 )
 def issue_token(
     db: DbSession,
+    request: Request,
     form_data: OAuth2PasswordRequestForm = Depends(),
 ) -> TokenResponse:
     """Authenticate a user and return a bearer token."""
@@ -36,5 +37,10 @@ def issue_token(
             detail="Incorrect username or password.",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    return build_token_response(user)
+    return build_token_response(
+        db,
+        user,
+        user_agent=request.headers.get("user-agent"),
+        ip_address=request.client.host if request.client else None,
+    )
 

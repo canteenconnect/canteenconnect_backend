@@ -27,13 +27,20 @@ def register_student(client: TestClient) -> None:
 def login(client: TestClient, username: str, password: str) -> str:
     """Authenticate a user and return the bearer token."""
 
+    payload = login_payload(client, username, password)
+    return payload["access_token"]
+
+
+def login_payload(client: TestClient, username: str, password: str) -> dict:
+    """Authenticate a user and return the full token payload."""
+
     response = client.post(
         "/token",
         data={"username": username, "password": password},
         headers={"Content-Type": "application/x-www-form-urlencoded"},
     )
     assert response.status_code == 200, response.text
-    return response.json()["access_token"]
+    return response.json()
 
 
 def login_via_auth_route(client: TestClient, identifier: str, password: str) -> dict:
@@ -91,6 +98,8 @@ def test_oauth2_login_accepts_email_and_auth_alias(client: TestClient) -> None:
 
     auth_payload = login_via_auth_route(client, "student1@example.com", "StrongPass123!")
     assert auth_payload["token_type"] == "bearer"
+    assert isinstance(auth_payload["refresh_token"], str)
+    assert auth_payload["refresh_token"]
     assert auth_payload["user"]["email"] == "student1@example.com"
     assert auth_payload["user"]["role"] == "student"
 
@@ -105,6 +114,62 @@ def test_openapi_exposes_oauth2_password_flow(client: TestClient) -> None:
     oauth_scheme = schema["components"]["securitySchemes"]["OAuth2PasswordBearer"]
     assert oauth_scheme["type"] == "oauth2"
     assert oauth_scheme["flows"]["password"]["tokenUrl"] == "/token"
+
+
+def test_refresh_rotation_and_reuse_revocation(client: TestClient) -> None:
+    """Refresh tokens rotate once and replayed tokens revoke the family."""
+
+    register_student(client)
+    first_session = login_payload(client, "student1", "StrongPass123!")
+
+    refresh_response = client.post(
+        "/auth/refresh",
+        json={"refresh_token": first_session["refresh_token"]},
+    )
+    assert refresh_response.status_code == 200, refresh_response.text
+    second_session = refresh_response.json()
+    assert second_session["access_token"] != first_session["access_token"]
+    assert second_session["refresh_token"] != first_session["refresh_token"]
+
+    replay_response = client.post(
+        "/auth/refresh",
+        json={"refresh_token": first_session["refresh_token"]},
+    )
+    assert replay_response.status_code == 401, replay_response.text
+
+    revoked_family_response = client.post(
+        "/auth/refresh",
+        json={"refresh_token": second_session["refresh_token"]},
+    )
+    assert revoked_family_response.status_code == 401, revoked_family_response.text
+
+
+def test_logout_revokes_current_access_and_refresh_tokens(client: TestClient) -> None:
+    """Logging out revokes the active access token and refresh family."""
+
+    register_student(client)
+    session = login_payload(client, "student1", "StrongPass123!")
+    access_token = session["access_token"]
+    refresh_token = session["refresh_token"]
+
+    logout_response = client.post(
+        "/auth/logout",
+        json={"refresh_token": refresh_token},
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
+    assert logout_response.status_code == 204, logout_response.text
+
+    me_response = client.get(
+        "/auth/me",
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
+    assert me_response.status_code == 401, me_response.text
+
+    refresh_response = client.post(
+        "/auth/refresh",
+        json={"refresh_token": refresh_token},
+    )
+    assert refresh_response.status_code == 401, refresh_response.text
 
 
 def test_student_cannot_manage_menu(client: TestClient) -> None:

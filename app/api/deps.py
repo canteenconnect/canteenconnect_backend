@@ -7,11 +7,12 @@ from typing import Annotated
 
 from fastapi import Depends, HTTPException, status
 from jose import JWTError
+from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
 
 from app.core.database import get_db
-from app.core.security import oauth2_scheme, parse_token_subject
-from app.models import User
+from app.core.security import ACCESS_TOKEN_TYPE, oauth2_scheme, parse_token
+from app.models import RevokedToken, User
 
 DbSession = Annotated[Session, Depends(get_db)]
 TokenDependency = Annotated[str, Depends(oauth2_scheme)]
@@ -27,14 +28,23 @@ def get_current_user(db: DbSession, token: TokenDependency) -> User:
     )
 
     try:
-        user_id, _ = parse_token_subject(token)
+        claims = parse_token(token, expected_type=ACCESS_TOKEN_TYPE)
     except (ValueError, JWTError) as exc:
         raise credentials_error from exc
+
+    revoked_token = db.scalar(
+        select(RevokedToken.id).where(
+            RevokedToken.token_jti == claims.jti,
+            RevokedToken.token_type == ACCESS_TOKEN_TYPE,
+        )
+    )
+    if revoked_token is not None:
+        raise credentials_error
 
     user = (
         db.query(User)
         .options(joinedload(User.role_rel))
-        .filter(User.id == user_id)
+        .filter(User.id == claims.user_id)
         .first()
     )
     if user is None:

@@ -10,8 +10,10 @@ This backend uses FastAPI's OAuth2 password flow for first-party clients such as
 
 - `POST /token`
 - `POST /auth/login`
+- `POST /auth/refresh`
+- `POST /auth/logout`
 
-Both endpoints accept `application/x-www-form-urlencoded` credentials and return the same JWT bearer token payload.
+The login endpoints accept `application/x-www-form-urlencoded` credentials and return the same JWT bearer token payload.
 
 ## Accepted Credentials
 
@@ -27,6 +29,7 @@ Successful authentication returns:
 ```json
 {
   "access_token": "jwt-token",
+  "refresh_token": "jwt-refresh-token",
   "token_type": "bearer",
   "user": {
     "id": 1,
@@ -66,6 +69,34 @@ curl "http://localhost:8000/auth/me" \
   -H "Authorization: Bearer <access_token>"
 ```
 
+## Refresh Rotation
+
+Refresh tokens are single-use. Exchange the current refresh token for a fresh pair:
+
+```bash
+curl -X POST "http://localhost:8000/auth/refresh" \
+  -H "Content-Type: application/json" \
+  -d '{"refresh_token":"<refresh_token>"}'
+```
+
+If a rotated refresh token is replayed, the backend revokes the full refresh family and forces a fresh sign-in.
+
+## Logout Revocation
+
+Logout revokes:
+
+- the current access token
+- the current refresh token family
+
+Example:
+
+```bash
+curl -X POST "http://localhost:8000/auth/logout" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <access_token>" \
+  -d '{"refresh_token":"<refresh_token>"}'
+```
+
 ## Swagger UI
 
 Open `/docs`, click `Authorize`, then paste the bearer token returned from `/token`.
@@ -82,3 +113,4 @@ Authentication only proves identity. Access to protected routes is enforced sepa
 - `student` users can browse menu items and place orders
 - `admin` users can manage outlets, users, and menu data
 - additional operational roles such as `campus_admin`, `vendor_manager`, and `kitchen_staff` are also recognized by admin workflows
+- `super_admin` users can access the full admin surface, including platform-wide management

@@ -5,6 +5,8 @@ from app.models.menu_item import MenuItem
 from app.models.order import Order, OrderItem, OrderStatus, PaymentStatus
 from app.models.outlet import Outlet
 from app.models.payment import Payment
+from app.models.refresh_token import RefreshToken
+from app.models.revoked_token import RevokedToken
 from app.models.role import Role
 from app.models.user import User
 
@@ -19,4 +21,6 @@ __all__ = [
     "OrderStatus",
     "PaymentStatus",
     "Payment",
+    "RefreshToken",
+    "RevokedToken",
 ]

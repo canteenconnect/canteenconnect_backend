@@ -17,6 +17,7 @@ Additional internal docs:
 
 - [docs/oauth2-flow.md](docs/oauth2-flow.md)
 - [docs/codebase-guide.md](docs/codebase-guide.md)
+- [docs/frontend-auth-flows.md](docs/frontend-auth-flows.md)
 
 ## Folder Structure
 
@@ -65,6 +66,8 @@ Important settings:
 
 - `DATABASE_URL`: SQLAlchemy database URL. For PostgreSQL use `postgresql+psycopg://user:password@host:5432/dbname`
 - `SECRET_KEY`: JWT signing key
+- `ACCESS_TOKEN_EXPIRE_MINUTES`: lifetime for access tokens
+- `REFRESH_TOKEN_EXPIRE_DAYS`: lifetime for refresh tokens
 - `CORS_ORIGINS`: comma-separated list of frontend origins
 - `AUTO_CREATE_SCHEMA`: set to `true` only for local bootstrap convenience
 - `INITIAL_ADMIN_*`: optional admin bootstrap credentials
@@ -99,6 +102,8 @@ uvicorn app.main:app --reload
 - `POST /auth/register` with JSON user payload to create a student account
 - `POST /token` with `application/x-www-form-urlencoded` fields `username` and `password`
 - `POST /auth/login` as a convenience alias for the same form-based login flow
+- `POST /auth/refresh` with the active refresh token to rotate the session
+- `POST /auth/logout` with the active bearer token and refresh token to revoke the session
 - Use the returned bearer token with `Authorization: Bearer <token>`
 
 The `username` form field can contain either the account username or the email address.
@@ -132,6 +137,8 @@ curl "http://localhost:8000/auth/me" \
 
 - `POST /auth/register`
 - `POST /auth/login`
+- `POST /auth/refresh`
+- `POST /auth/logout`
 - `GET /auth/me`
 - `GET /menu`
 - `POST /menu` admin only
@@ -165,6 +172,9 @@ Current auth coverage includes:
 - OAuth2 login by username
 - OAuth2 login by email
 - `/auth/login` alias behavior
+- refresh-token rotation
+- logout token revocation
+- refresh-token replay detection
 - OpenAPI OAuth2 password-flow declaration
 - RBAC enforcement for admin-only routes
 

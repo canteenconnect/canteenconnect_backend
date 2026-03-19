@@ -13,6 +13,8 @@ from app.models.base import Base
 if TYPE_CHECKING:
     from app.models.order import Order
     from app.models.payment import Payment
+    from app.models.refresh_token import RefreshToken
+    from app.models.revoked_token import RevokedToken
     from app.models.role import Role
 
 
@@ -38,6 +40,8 @@ class User(Base):
     role_rel: Mapped["Role"] = relationship(back_populates="users")
     orders: Mapped[list["Order"]] = relationship(back_populates="student")
     payments: Mapped[list["Payment"]] = relationship(back_populates="user")
+    refresh_tokens: Mapped[list["RefreshToken"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    revoked_tokens: Mapped[list["RevokedToken"]] = relationship(back_populates="user", cascade="all, delete-orphan")
 
     @property
     def role(self) -> str:
