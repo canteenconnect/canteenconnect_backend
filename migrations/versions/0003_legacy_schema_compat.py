@@ -597,9 +597,9 @@ def _migrate_payments_table() -> None:
             f"""
             UPDATE payments
             SET user_id = COALESCE(payments.user_id, {order_user_source}),
-                provider = COALESCE(NULLIF(provider, ''), COALESCE({payment_mode_source}, 'cash')),
-                amount = COALESCE(amount, orders.total_amount),
-                updated_at = COALESCE(updated_at, payments.created_at, now())
+                provider = COALESCE(NULLIF(payments.provider, ''), COALESCE({payment_mode_source}, 'cash')),
+                amount = COALESCE(payments.amount, orders.total_amount),
+                updated_at = COALESCE(payments.updated_at, payments.created_at, now())
             FROM orders
             WHERE orders.id = payments.order_id
             """
