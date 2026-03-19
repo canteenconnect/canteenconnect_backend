@@ -12,6 +12,7 @@ from app.schemas.order import OrderCreate, OrderRead, OrderStatusUpdate
 from app.services.orders import create_order, get_order_by_id, list_orders_for_user, update_order_status
 
 router = APIRouter()
+ADMIN_ORDER_ROLES = {"admin", "super_admin", "campus_admin", "vendor_manager", "kitchen_staff"}
 
 
 @router.post("", response_model=OrderRead, status_code=status.HTTP_201_CREATED, summary="Place an order")
@@ -52,7 +53,7 @@ def get_order(
     order = get_order_by_id(db, order_id)
     if order is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found.")
-    if current_user.role != "admin" and order.student_id != current_user.id:
+    if current_user.role not in ADMIN_ORDER_ROLES and order.student_id != current_user.id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Order access denied.")
     return order
 

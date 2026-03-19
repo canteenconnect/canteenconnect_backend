@@ -15,6 +15,7 @@ from app.schemas.order import OrderCreate
 from app.schemas.payment import PaymentCreate
 
 TWOPLACES = Decimal("0.01")
+ADMIN_ORDER_ROLES = {"admin", "super_admin", "campus_admin", "vendor_manager", "kitchen_staff"}
 
 
 def _normalize_amount(amount: Decimal) -> Decimal:
@@ -123,7 +124,7 @@ def list_orders_for_user(db: Session, user: User) -> list[Order]:
     """Return the current user's orders, or all orders for admins."""
 
     statement = _order_query().order_by(Order.created_at.desc())
-    if user.role != "admin":
+    if user.role not in ADMIN_ORDER_ROLES:
         statement = statement.where(Order.student_id == user.id)
     return list(db.scalars(statement).unique().all())
 
@@ -182,7 +183,7 @@ def list_payments_for_user(db: Session, user: User) -> list[Payment]:
     """Return payments owned by the user, or all payments for admins."""
 
     statement = select(Payment).order_by(Payment.created_at.desc())
-    if user.role != "admin":
+    if user.role not in ADMIN_ORDER_ROLES:
         statement = statement.where(Payment.user_id == user.id)
     return list(db.scalars(statement).all())
 
