@@ -1,8 +1,0 @@
-.env
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-.venv/
-venv/
-postgres_data/
