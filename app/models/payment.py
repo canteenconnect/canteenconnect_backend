@@ -1,44 +1,44 @@
-from sqlalchemy import Index
-from sqlalchemy.sql import func
+"""Payment model for order payment tracking."""
 
-from app import db
+from __future__ import annotations
+
+from datetime import datetime
+from decimal import Decimal
+from typing import TYPE_CHECKING
+
+from sqlalchemy import DateTime, ForeignKey, Numeric, String, func
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from app.models.base import Base
+from app.models.order import PaymentStatus
+
+if TYPE_CHECKING:
+    from app.models.order import Order
+    from app.models.user import User
 
 
-class Payment(db.Model):
+class Payment(Base):
+    """Payment record attached to an order."""
+
     __tablename__ = "payments"
 
-    id = db.Column(db.Integer, primary_key=True)
-    order_id = db.Column(db.Integer, db.ForeignKey("orders.id", ondelete="CASCADE"), nullable=False, index=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
-    amount = db.Column(db.Numeric(12, 2), nullable=False)
-    currency = db.Column(db.String(8), nullable=False, server_default="INR")
-    gateway = db.Column(db.String(32), nullable=False)
-    gateway_order_id = db.Column(db.String(120), nullable=True, index=True)
-    gateway_payment_id = db.Column(db.String(120), nullable=True, index=True)
-    gateway_signature = db.Column(db.String(255))
-    status = db.Column(db.String(24), nullable=False, index=True)
-    created_at = db.Column(db.DateTime(timezone=True), nullable=False, server_default=func.now())
-    updated_at = db.Column(db.DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
-
-    order = db.relationship("Order", back_populates="payments")
-    user = db.relationship("User", back_populates="payments")
-
-    __table_args__ = (
-        Index("ix_payments_gateway_order_id", "gateway_order_id"),
-        Index("ix_payments_gateway_payment_id", "gateway_payment_id"),
+    id: Mapped[int] = mapped_column(primary_key=True)
+    order_id: Mapped[int] = mapped_column(ForeignKey("orders.id", ondelete="CASCADE"), index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"), index=True)
+    provider: Mapped[str] = mapped_column(String(30))
+    amount: Mapped[Decimal] = mapped_column(Numeric(10, 2))
+    status: Mapped[PaymentStatus] = mapped_column(default=PaymentStatus.pending)
+    transaction_reference: Mapped[str] = mapped_column(
+        String(120),
+        nullable=True,
+        index=True,
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
     )
 
-    def to_dict(self):
-        return {
-            "id": self.id,
-            "order_id": self.order_id,
-            "user_id": self.user_id,
-            "amount": float(self.amount) if self.amount is not None else None,
-            "currency": self.currency,
-            "gateway": self.gateway,
-            "gateway_order_id": self.gateway_order_id,
-            "gateway_payment_id": self.gateway_payment_id,
-            "status": self.status,
-            "created_at": self.created_at.isoformat() if self.created_at else None,
-            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
-        }
+    order: Mapped["Order"] = relationship(back_populates="payments")
+    user: Mapped["User"] = relationship(back_populates="payments")

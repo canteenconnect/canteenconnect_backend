@@ -1,45 +1,39 @@
-from sqlalchemy import Index
-from sqlalchemy.sql import func
+"""Menu item model exposed to students and admins."""
 
-from app import db
+from __future__ import annotations
+
+from datetime import datetime
+from decimal import Decimal
+from typing import TYPE_CHECKING
+
+from sqlalchemy import Boolean, DateTime, ForeignKey, Numeric, String, Text, func
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from app.models.base import Base
+
+if TYPE_CHECKING:
+    from app.models.order import OrderItem
+    from app.models.outlet import Outlet
 
 
-class MenuItem(db.Model):
+class MenuItem(Base):
+    """Menu item listed under a canteen outlet."""
+
     __tablename__ = "menu_items"
 
-    id = db.Column(db.Integer, primary_key=True)
-    outlet_id = db.Column(
-        db.Integer,
-        db.ForeignKey("outlets.id", ondelete="CASCADE"),
-        nullable=False,
-        index=True,
-    )
-    name = db.Column(db.String(120), nullable=False)
-    description = db.Column(db.Text)
-    price = db.Column(db.Numeric(10, 2), nullable=False)
-    available_quantity = db.Column(db.Integer, nullable=False, server_default="0")
-    is_available = db.Column(db.Boolean, nullable=False, server_default="true")
-    created_at = db.Column(db.DateTime(timezone=True), nullable=False, server_default=func.now())
-    updated_at = db.Column(db.DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
-
-    outlet = db.relationship("Outlet", back_populates="menu_items")
-    order_items = db.relationship("OrderItem", back_populates="menu_item")
-    favorites = db.relationship("Favorite", back_populates="menu_item", cascade="all, delete-orphan")
-
-    __table_args__ = (
-        Index("ix_menu_items_outlet_id_name", "outlet_id", "name"),
-        Index("ix_menu_items_is_available", "is_available"),
+    id: Mapped[int] = mapped_column(primary_key=True)
+    outlet_id: Mapped[int] = mapped_column(ForeignKey("outlets.id", ondelete="CASCADE"), index=True)
+    name: Mapped[str] = mapped_column(String(120), index=True)
+    description: Mapped[str] = mapped_column(Text, nullable=True)
+    price: Mapped[Decimal] = mapped_column(Numeric(10, 2))
+    stock_quantity: Mapped[int] = mapped_column(default=0, server_default="0")
+    is_available: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
     )
 
-    def to_dict(self):
-        return {
-            "id": self.id,
-            "outlet_id": self.outlet_id,
-            "name": self.name,
-            "description": self.description,
-            "price": float(self.price) if self.price is not None else None,
-            "available_quantity": self.available_quantity,
-            "is_available": self.is_available,
-            "created_at": self.created_at.isoformat() if self.created_at else None,
-            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
-        }
+    outlet: Mapped["Outlet"] = relationship(back_populates="menu_items")
+    order_items: Mapped[list["OrderItem"]] = relationship(back_populates="menu_item")

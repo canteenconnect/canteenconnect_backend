@@ -1,94 +1,87 @@
-from sqlalchemy import Index
-from sqlalchemy.sql import func
+"""Order and order item models for student purchases."""
 
-from app import db
+from __future__ import annotations
 
-ORDER_STATUS_PENDING_PAYMENT = "PENDING_PAYMENT"
-ORDER_STATUS_PENDING = "PENDING"
-ORDER_STATUS_PREPARING = "PREPARING"
-ORDER_STATUS_READY = "READY"
-ORDER_STATUS_COMPLETED = "COMPLETED"
-ORDER_STATUS_CANCELLED = "CANCELLED"
-ORDER_STATUS_FAILED = "FAILED"
+from datetime import datetime
+from decimal import Decimal
+from enum import Enum
+from typing import TYPE_CHECKING
 
-ORDER_STATUSES = {
-    ORDER_STATUS_PENDING_PAYMENT,
-    ORDER_STATUS_PENDING,
-    ORDER_STATUS_PREPARING,
-    ORDER_STATUS_READY,
-    ORDER_STATUS_COMPLETED,
-    ORDER_STATUS_CANCELLED,
-    ORDER_STATUS_FAILED,
-}
+from sqlalchemy import DateTime, Enum as SqlEnum, ForeignKey, Numeric, String, func
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-PAYMENT_STATUS_CREATED = "CREATED"
-PAYMENT_STATUS_PAID = "PAID"
-PAYMENT_STATUS_FAILED = "FAILED"
+from app.models.base import Base
+
+if TYPE_CHECKING:
+    from app.models.menu_item import MenuItem
+    from app.models.outlet import Outlet
+    from app.models.payment import Payment
+    from app.models.user import User
 
 
-class Order(db.Model):
+class OrderStatus(str, Enum):
+    """Lifecycle states for an order."""
+
+    pending = "pending"
+    confirmed = "confirmed"
+    preparing = "preparing"
+    completed = "completed"
+    cancelled = "cancelled"
+
+
+class PaymentStatus(str, Enum):
+    """Lifecycle states for an order payment."""
+
+    pending = "pending"
+    paid = "paid"
+    failed = "failed"
+
+
+class Order(Base):
+    """Top-level order placed by a student."""
+
     __tablename__ = "orders"
 
-    id = db.Column(db.Integer, primary_key=True)
-    order_number = db.Column(db.String(32), nullable=False, unique=True, index=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
-    outlet_id = db.Column(db.Integer, db.ForeignKey("outlets.id", ondelete="CASCADE"), nullable=False, index=True)
-    total_amount = db.Column(db.Numeric(12, 2), nullable=False)
-    status = db.Column(db.String(24), nullable=False, index=True)
-    payment_status = db.Column(db.String(24), nullable=False, index=True, server_default=PAYMENT_STATUS_CREATED)
-    created_at = db.Column(db.DateTime(timezone=True), nullable=False, server_default=func.now())
-    updated_at = db.Column(db.DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
-
-    user = db.relationship("User", back_populates="orders")
-    outlet = db.relationship("Outlet", back_populates="orders")
-    order_items = db.relationship("OrderItem", back_populates="order", cascade="all, delete-orphan")
-    payments = db.relationship("Payment", back_populates="order")
-    transactions = db.relationship("Transaction", back_populates="order")
-
-    __table_args__ = (
-        Index("ix_orders_created_at", "created_at"),
-        Index("ix_orders_status", "status"),
-        Index("ix_orders_user_id", "user_id"),
-        Index("ix_orders_outlet_id", "outlet_id"),
+    id: Mapped[int] = mapped_column(primary_key=True)
+    order_number: Mapped[str] = mapped_column(String(32), unique=True, index=True)
+    student_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"), index=True)
+    outlet_id: Mapped[int] = mapped_column(ForeignKey("outlets.id", ondelete="RESTRICT"), index=True)
+    status: Mapped[OrderStatus] = mapped_column(SqlEnum(OrderStatus), default=OrderStatus.pending)
+    payment_status: Mapped[PaymentStatus] = mapped_column(
+        SqlEnum(PaymentStatus),
+        default=PaymentStatus.pending,
+    )
+    total_amount: Mapped[Decimal] = mapped_column(Numeric(10, 2))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
     )
 
-    def to_dict(self, include_items: bool = False):
-        payload = {
-            "id": self.id,
-            "order_number": self.order_number,
-            "user_id": self.user_id,
-            "outlet_id": self.outlet_id,
-            "total_amount": float(self.total_amount) if self.total_amount is not None else None,
-            "status": self.status,
-            "payment_status": self.payment_status,
-            "created_at": self.created_at.isoformat() if self.created_at else None,
-            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
-        }
-        if include_items:
-            payload["items"] = [item.to_dict() for item in self.order_items]
-        return payload
+    student: Mapped["User"] = relationship(back_populates="orders")
+    outlet: Mapped["Outlet"] = relationship(back_populates="orders")
+    items: Mapped[list["OrderItem"]] = relationship(
+        back_populates="order",
+        cascade="all, delete-orphan",
+    )
+    payments: Mapped[list["Payment"]] = relationship(
+        back_populates="order",
+        cascade="all, delete-orphan",
+    )
 
 
-class OrderItem(db.Model):
+class OrderItem(Base):
+    """Individual line item belonging to an order."""
+
     __tablename__ = "order_items"
 
-    id = db.Column(db.Integer, primary_key=True)
-    order_id = db.Column(db.Integer, db.ForeignKey("orders.id", ondelete="CASCADE"), nullable=False, index=True)
-    menu_item_id = db.Column(db.Integer, db.ForeignKey("menu_items.id", ondelete="RESTRICT"), nullable=False, index=True)
-    quantity = db.Column(db.Integer, nullable=False)
-    unit_price = db.Column(db.Numeric(10, 2), nullable=False)
-    line_total = db.Column(db.Numeric(12, 2), nullable=False)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    order_id: Mapped[int] = mapped_column(ForeignKey("orders.id", ondelete="CASCADE"), index=True)
+    menu_item_id: Mapped[int] = mapped_column(ForeignKey("menu_items.id", ondelete="RESTRICT"), index=True)
+    quantity: Mapped[int] = mapped_column()
+    unit_price: Mapped[Decimal] = mapped_column(Numeric(10, 2))
+    line_total: Mapped[Decimal] = mapped_column(Numeric(10, 2))
 
-    order = db.relationship("Order", back_populates="order_items")
-    menu_item = db.relationship("MenuItem", back_populates="order_items")
-
-    def to_dict(self):
-        return {
-            "id": self.id,
-            "order_id": self.order_id,
-            "menu_item_id": self.menu_item_id,
-            "quantity": self.quantity,
-            "unit_price": float(self.unit_price) if self.unit_price is not None else None,
-            "line_total": float(self.line_total) if self.line_total is not None else None,
-            "menu_item": self.menu_item.to_dict() if self.menu_item else None,
-        }
+    order: Mapped["Order"] = relationship(back_populates="items")
+    menu_item: Mapped["MenuItem"] = relationship(back_populates="order_items")

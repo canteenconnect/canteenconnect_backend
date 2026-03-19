@@ -1,12 +1,35 @@
-.venv/
-.pg/
-.runtime/
-__pycache__/
-*.pyc
+﻿# Environment files
 .env
 .env.*
 !.env.example
-*.log
-*.sqlite3
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Local databases and artifacts
 *.db
-*.DS_Store
+*.sqlite3
+instance/
+
+# Editors
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+

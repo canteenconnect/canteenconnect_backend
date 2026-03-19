@@ -1,41 +1,38 @@
-from sqlalchemy import Index
-from sqlalchemy.sql import func
+"""Outlet model for multi-outlet canteen management."""
 
-from app import db
+from __future__ import annotations
+
+from datetime import datetime
+from typing import TYPE_CHECKING
+
+from sqlalchemy import Boolean, DateTime, String, func
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from app.models.base import Base
+
+if TYPE_CHECKING:
+    from app.models.menu_item import MenuItem
+    from app.models.order import Order
 
 
-class Outlet(db.Model):
+class Outlet(Base):
+    """A physical or virtual outlet managed by the platform."""
+
     __tablename__ = "outlets"
 
-    id = db.Column(db.Integer, primary_key=True)
-    campus_id = db.Column(
-        db.Integer,
-        db.ForeignKey("campuses.id", ondelete="CASCADE"),
-        nullable=False,
-        index=True,
-    )
-    name = db.Column(db.String(120), nullable=False)
-    location = db.Column(db.String(255), nullable=False)
-    is_active = db.Column(db.Boolean, nullable=False, server_default="true")
-    created_at = db.Column(db.DateTime(timezone=True), nullable=False, server_default=func.now())
-    updated_at = db.Column(db.DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
-
-    campus = db.relationship("Campus", back_populates="outlets")
-    menu_items = db.relationship("MenuItem", back_populates="outlet", cascade="all, delete-orphan")
-    orders = db.relationship("Order", back_populates="outlet")
-    vendors = db.relationship("User", back_populates="outlet")
-
-    __table_args__ = (
-        Index("ix_outlets_campus_id_name", "campus_id", "name", unique=True),
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(120), unique=True, index=True)
+    location: Mapped[str] = mapped_column(String(255))
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
     )
 
-    def to_dict(self):
-        return {
-            "id": self.id,
-            "campus_id": self.campus_id,
-            "name": self.name,
-            "location": self.location,
-            "is_active": self.is_active,
-            "created_at": self.created_at.isoformat() if self.created_at else None,
-            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
-        }
+    menu_items: Mapped[list["MenuItem"]] = relationship(
+        back_populates="outlet",
+        cascade="all, delete-orphan",
+    )
+    orders: Mapped[list["Order"]] = relationship(back_populates="outlet")

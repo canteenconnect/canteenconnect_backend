@@ -1,22 +1,27 @@
-from sqlalchemy.sql import func
+"""Role model used for role-based access control."""
 
-from app import db
+from __future__ import annotations
+
+from datetime import datetime
+from typing import TYPE_CHECKING
+
+from sqlalchemy import String, func
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from app.models.base import Base
+
+if TYPE_CHECKING:
+    from app.models.user import User
 
 
-class Role(db.Model):
+class Role(Base):
+    """Persisted user role such as admin or student."""
+
     __tablename__ = "roles"
 
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(50), nullable=False, unique=True, index=True)
-    description = db.Column(db.String(255))
-    created_at = db.Column(db.DateTime(timezone=True), nullable=False, server_default=func.now())
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(50), unique=True, index=True)
+    description: Mapped[str] = mapped_column(String(255), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
 
-    users = db.relationship("User", back_populates="role")
-
-    def to_dict(self):
-        return {
-            "id": self.id,
-            "name": self.name,
-            "description": self.description,
-            "created_at": self.created_at.isoformat() if self.created_at else None,
-        }
+    users: Mapped[list["User"]] = relationship(back_populates="role_rel")
