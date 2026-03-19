@@ -426,11 +426,12 @@ def _migrate_orders_table() -> None:
             )
         )
 
+    completed_at_source = "completed_at" if "completed_at" in columns else "created_at"
     op.execute(
         sa.text(
-            """
+            f"""
             UPDATE orders
-            SET updated_at = COALESCE(updated_at, completed_at, created_at, now())
+            SET updated_at = COALESCE(updated_at, {completed_at_source}, created_at, now())
             WHERE updated_at IS NULL
             """
         )
@@ -503,6 +504,7 @@ def _migrate_payments_table() -> None:
     """Rename legacy payment columns and backfill new ownership metadata."""
 
     columns = _column_names("payments")
+    order_columns = _column_names("orders")
 
     if "payment_status" in columns and "status" not in columns:
         op.alter_column(
@@ -568,12 +570,13 @@ def _migrate_payments_table() -> None:
         )
         columns = _column_names("payments")
 
+    payment_mode_source = "orders.payment_mode" if "payment_mode" in order_columns else "'cash'"
     op.execute(
         sa.text(
-            """
+            f"""
             UPDATE payments
             SET user_id = orders.student_id,
-                provider = COALESCE(NULLIF(provider, ''), COALESCE(orders.payment_mode, 'cash')),
+                provider = COALESCE(NULLIF(provider, ''), COALESCE({payment_mode_source}, 'cash')),
                 amount = COALESCE(amount, orders.total_amount),
                 updated_at = COALESCE(updated_at, payments.created_at, now())
             FROM orders
