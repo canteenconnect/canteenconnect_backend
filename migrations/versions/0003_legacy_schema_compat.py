@@ -382,6 +382,23 @@ def _migrate_orders_table() -> None:
 
     columns = _column_names("orders")
 
+    if "user_id" in columns and "student_id" not in columns:
+        user_fk = _foreign_key_name("orders", ["user_id"])
+        if user_fk is not None:
+            op.drop_constraint(user_fk, "orders", type_="foreignkey")
+        op.alter_column(
+            "orders",
+            "user_id",
+            new_column_name="student_id",
+            existing_type=sa.Integer(),
+            existing_nullable=True,
+        )
+        columns = _column_names("orders")
+
+    if "student_id" not in columns:
+        op.add_column("orders", sa.Column("student_id", sa.Integer(), nullable=True))
+        columns = _column_names("orders")
+
     if "payment_status" not in columns:
         op.add_column(
             "orders",
@@ -414,7 +431,7 @@ def _migrate_orders_table() -> None:
     if student_fk is not None:
         op.drop_constraint(student_fk, "orders", type_="foreignkey")
 
-    if _table_exists("students"):
+    if "student_id" in columns and _table_exists("students"):
         op.execute(
             sa.text(
                 """
@@ -437,8 +454,11 @@ def _migrate_orders_table() -> None:
         )
     )
 
+    if not _index_exists("orders", op.f("ix_orders_student_id")):
+        op.create_index(op.f("ix_orders_student_id"), "orders", ["student_id"], unique=False)
+
     order_student_fk = _foreign_key_name("orders", ["student_id"], "users")
-    if order_student_fk is None:
+    if "student_id" in _column_names("orders") and order_student_fk is None:
         op.create_foreign_key(
             op.f("fk_orders_student_id_users"),
             "orders",
@@ -571,11 +591,12 @@ def _migrate_payments_table() -> None:
         columns = _column_names("payments")
 
     payment_mode_source = "orders.payment_mode" if "payment_mode" in order_columns else "'cash'"
+    order_user_source = "orders.student_id" if "student_id" in order_columns else "payments.user_id"
     op.execute(
         sa.text(
             f"""
             UPDATE payments
-            SET user_id = orders.student_id,
+            SET user_id = COALESCE(payments.user_id, {order_user_source}),
                 provider = COALESCE(NULLIF(provider, ''), COALESCE({payment_mode_source}, 'cash')),
                 amount = COALESCE(amount, orders.total_amount),
                 updated_at = COALESCE(updated_at, payments.created_at, now())
