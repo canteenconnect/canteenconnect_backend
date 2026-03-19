@@ -8,6 +8,15 @@ from typing import Annotated, Any
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
+DEFAULT_CORS_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "https://canteenconnect-frontend.vercel.app",
+    "https://canteen-student-portal.vercel.app",
+    "https://canteen-admin-kappa.vercel.app",
+    "https://new-folder-app-three.vercel.app",
+]
+
 
 class Settings(BaseSettings):
     """Typed runtime configuration for the FastAPI service."""
@@ -28,7 +37,7 @@ class Settings(BaseSettings):
     initial_admin_password: str | None = Field(default=None, alias="INITIAL_ADMIN_PASSWORD")
 
     cors_origins: Annotated[list[str], NoDecode] = Field(
-        default_factory=lambda: ["http://localhost:5173"],
+        default_factory=lambda: list(DEFAULT_CORS_ORIGINS),
         alias="CORS_ORIGINS",
     )
 
@@ -44,12 +53,22 @@ class Settings(BaseSettings):
     def parse_cors_origins(cls, value: Any) -> list[str]:
         """Parse comma-separated CORS origins from the environment."""
 
+        def unique(origins: list[str]) -> list[str]:
+            seen: set[str] = set()
+            ordered: list[str] = []
+            for origin in origins:
+                normalized = origin.strip()
+                if normalized and normalized not in seen:
+                    seen.add(normalized)
+                    ordered.append(normalized)
+            return ordered
+
         if value is None or value == "":
-            return ["http://localhost:5173"]
+            return list(DEFAULT_CORS_ORIGINS)
         if isinstance(value, str):
-            return [origin.strip() for origin in value.split(",") if origin.strip()]
+            return unique([*DEFAULT_CORS_ORIGINS, *value.split(",")])
         if isinstance(value, list):
-            return [str(origin).strip() for origin in value if str(origin).strip()]
+            return unique([*DEFAULT_CORS_ORIGINS, *[str(origin) for origin in value]])
         raise ValueError("Invalid CORS origins configuration")
 
     @field_validator("debug", mode="before")
