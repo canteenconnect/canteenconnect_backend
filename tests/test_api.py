@@ -36,6 +36,18 @@ def login(client: TestClient, username: str, password: str) -> str:
     return response.json()["access_token"]
 
 
+def login_via_auth_route(client: TestClient, identifier: str, password: str) -> dict:
+    """Authenticate through `/auth/login` and return the full token payload."""
+
+    response = client.post(
+        "/auth/login",
+        data={"username": identifier, "password": password},
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
+    )
+    assert response.status_code == 200, response.text
+    return response.json()
+
+
 def create_admin(client: TestClient, db_session_factory) -> str:
     """Create an admin user directly through the service layer."""
 
@@ -66,6 +78,33 @@ def test_register_login_and_me(client: TestClient) -> None:
     body = response.json()
     assert body["username"] == "student1"
     assert body["role"] == "student"
+
+
+def test_oauth2_login_accepts_email_and_auth_alias(client: TestClient) -> None:
+    """OAuth2 login works with email identifiers on both auth endpoints."""
+
+    register_student(client)
+
+    token = login(client, "student1@example.com", "StrongPass123!")
+    assert isinstance(token, str)
+    assert token
+
+    auth_payload = login_via_auth_route(client, "student1@example.com", "StrongPass123!")
+    assert auth_payload["token_type"] == "bearer"
+    assert auth_payload["user"]["email"] == "student1@example.com"
+    assert auth_payload["user"]["role"] == "student"
+
+
+def test_openapi_exposes_oauth2_password_flow(client: TestClient) -> None:
+    """Generated OpenAPI spec advertises the OAuth2 password flow."""
+
+    response = client.get("/openapi.json")
+    assert response.status_code == 200, response.text
+
+    schema = response.json()
+    oauth_scheme = schema["components"]["securitySchemes"]["OAuth2PasswordBearer"]
+    assert oauth_scheme["type"] == "oauth2"
+    assert oauth_scheme["flows"]["password"]["tokenUrl"] == "/token"
 
 
 def test_student_cannot_manage_menu(client: TestClient) -> None:

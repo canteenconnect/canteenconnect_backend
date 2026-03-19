@@ -12,6 +12,15 @@ from app.api.routes import api_router
 from app.core.config import get_settings
 from app.services.bootstrap import initialize_application
 
+OPENAPI_TAGS = [
+    {"name": "token", "description": "OAuth2 password-flow token issuance for Swagger UI and API clients."},
+    {"name": "auth", "description": "Public authentication and profile bootstrap endpoints."},
+    {"name": "menu", "description": "Outlet menu browsing and admin-managed menu operations."},
+    {"name": "orders", "description": "Student ordering and operational order status workflows."},
+    {"name": "payments", "description": "Payment registration against created orders."},
+    {"name": "admin", "description": "Administrative user, outlet, and reporting operations protected by RBAC."},
+]
+
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
@@ -30,6 +39,7 @@ def create_app() -> FastAPI:
         version=settings.app_version,
         debug=settings.debug,
         description="Production-ready FastAPI backend for the Canteen Management SaaS.",
+        openapi_tags=OPENAPI_TAGS,
         lifespan=lifespan,
     )
 

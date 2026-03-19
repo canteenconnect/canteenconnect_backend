@@ -32,7 +32,16 @@ def register_user(db: DbSession, payload: UserCreate) -> UserRead:
     return user
 
 
-@router.post("/login", response_model=TokenResponse, summary="Log in with username/password")
+@router.post(
+    "/login",
+    response_model=TokenResponse,
+    summary="Log in with username/password",
+    description=(
+        "Convenience auth route that mirrors the OAuth2 token endpoint. Accepts "
+        "`application/x-www-form-urlencoded` credentials and returns the same JWT "
+        "bearer token payload as `/token`."
+    ),
+)
 def login_user(
     db: DbSession,
     form_data: OAuth2PasswordRequestForm = Depends(),

@@ -10,10 +10,22 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field
 class UserCreate(BaseModel):
     """Payload for creating a new application user."""
 
-    username: str = Field(min_length=3, max_length=50)
-    email: EmailStr
-    full_name: str = Field(min_length=2, max_length=120)
-    password: str = Field(min_length=8, max_length=128)
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "username": "student1",
+                "email": "student1@example.com",
+                "full_name": "Student One",
+                "password": "StrongPass123!",
+                "role": "student",
+            }
+        }
+    )
+
+    username: str = Field(min_length=3, max_length=50, description="Unique login username.")
+    email: EmailStr = Field(description="Unique email address used for login or notifications.")
+    full_name: str = Field(min_length=2, max_length=120, description="Display name for the user.")
+    password: str = Field(min_length=8, max_length=128, description="Plaintext password that will be hashed server-side.")
     role: str = Field(default="student", description="Requested role. Public registration defaults to student.")
 
 

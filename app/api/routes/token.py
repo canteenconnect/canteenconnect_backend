@@ -12,7 +12,17 @@ from app.services.auth import authenticate_user, build_token_response
 router = APIRouter()
 
 
-@router.post("/token", response_model=TokenResponse, summary="Issue an OAuth2 access token")
+@router.post(
+    "/token",
+    response_model=TokenResponse,
+    summary="Issue an OAuth2 access token",
+    description=(
+        "Primary OAuth2 password-flow endpoint used by Swagger UI and frontend "
+        "clients. Submit `application/x-www-form-urlencoded` data with a "
+        "`username` field that may contain either the user's username or email, "
+        "plus the plaintext `password`."
+    ),
+)
 def issue_token(
     db: DbSession,
     form_data: OAuth2PasswordRequestForm = Depends(),

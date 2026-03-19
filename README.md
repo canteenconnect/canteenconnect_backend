@@ -13,6 +13,11 @@ This repository contains a production-oriented FastAPI backend for a Canteen Man
 - Docker image for deployment
 - GitHub Actions CI for linting, testing, and container builds
 
+Additional internal docs:
+
+- [docs/oauth2-flow.md](docs/oauth2-flow.md)
+- [docs/codebase-guide.md](docs/codebase-guide.md)
+
 ## Folder Structure
 
 ```text
@@ -93,9 +98,35 @@ uvicorn app.main:app --reload
 
 - `POST /auth/register` with JSON user payload to create a student account
 - `POST /token` with `application/x-www-form-urlencoded` fields `username` and `password`
+- `POST /auth/login` as a convenience alias for the same form-based login flow
 - Use the returned bearer token with `Authorization: Bearer <token>`
 
+The `username` form field can contain either the account username or the email address.
+
 Swagger UI understands the OAuth2 password flow because the app exposes `/token` through `OAuth2PasswordBearer`.
+
+### OAuth2 Example
+
+```bash
+curl -X POST "http://localhost:8000/token" \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "username=admin1&password=StrongPass123!"
+```
+
+Then use the returned token:
+
+```bash
+curl "http://localhost:8000/auth/me" \
+  -H "Authorization: Bearer <access_token>"
+```
+
+### Swagger Authorization
+
+1. Open `http://localhost:8000/docs`
+2. Call `POST /token`
+3. Copy `access_token`
+4. Click `Authorize`
+5. Paste the bearer token value
 
 ## Core Endpoints
 
@@ -127,6 +158,15 @@ docker run --env-file .env -p 8000:80 canteen-backend
 ruff check .
 pytest
 ```
+
+Current auth coverage includes:
+
+- student registration
+- OAuth2 login by username
+- OAuth2 login by email
+- `/auth/login` alias behavior
+- OpenAPI OAuth2 password-flow declaration
+- RBAC enforcement for admin-only routes
 
 ## Deployment Notes
 
