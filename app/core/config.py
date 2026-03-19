@@ -14,6 +14,7 @@ DEFAULT_CORS_ORIGINS = [
     "https://canteenconnect-frontend.vercel.app",
     "https://canteen-student-portal.vercel.app",
     "https://canteen-admin-kappa.vercel.app",
+    "https://canteen-admin-nine.vercel.app",
     "https://new-folder-app-three.vercel.app",
 ]
 
